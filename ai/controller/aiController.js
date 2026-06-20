@@ -6,17 +6,17 @@ import Product from "../../model/product-schema.js";
 
 export const analyzeUserImage = async (req, res) => {
   try {
-    // ✅ SAFETY CHECK
+    //  SAFETY CHECK
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // ✅ SEND IMAGE TO AI SERVICE
+    //  SEND IMAGE TO AI SERVICE
     const formData = new FormData();
     formData.append("file", fs.createReadStream(req.file.path));
 
     const response = await axios.post(
-      "http://127.0.0.1:8001/analyze",
+      "https://clothing-ai-service.onrender.com/analyze",
       formData,
       { headers: formData.getHeaders() }
     );
@@ -27,7 +27,7 @@ export const analyzeUserImage = async (req, res) => {
 
     let matchedProducts = [];
 
-    // 🔥 STEP 1: CATEGORY BASED MATCH WITH FALLBACK
+    //  STEP 1: CATEGORY BASED MATCH WITH FALLBACK
     for (let rec of aiData.recommendations) {
       let products = await Product.aggregate([
         {
@@ -39,7 +39,7 @@ export const analyzeUserImage = async (req, res) => {
         { $sample: { size: 2 } }
       ]);
 
-      // 🔥 IF NO MATCH → fallback to any category (same gender)
+      //  IF NO MATCH → fallback to any category (same gender)
       if (products.length === 0) {
         products = await Product.aggregate([
           {
@@ -54,7 +54,7 @@ export const analyzeUserImage = async (req, res) => {
       matchedProducts.push(...products);
     }
 
-    // 🔥 STEP 2: ADD FULL OUTFIT (SHOES, CAPS, ETC.)
+    //  STEP 2: ADD FULL OUTFIT (SHOES, CAPS, ETC.)
     const extraProducts = await Product.aggregate([
       {
         $match: {
@@ -66,7 +66,7 @@ export const analyzeUserImage = async (req, res) => {
 
     matchedProducts = [...matchedProducts, ...extraProducts];
 
-    // 🔥 STEP 3: REMOVE DUPLICATES
+    //  STEP 3: REMOVE DUPLICATES
     const uniqueProducts = [];
     const ids = new Set();
 
@@ -79,7 +79,7 @@ export const analyzeUserImage = async (req, res) => {
 
     matchedProducts = uniqueProducts;
 
-    // 🔥 STEP 4: FINAL FALLBACK
+    //  STEP 4: FINAL FALLBACK
     if (matchedProducts.length === 0) {
       matchedProducts = await Product.aggregate([
         {
